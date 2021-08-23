@@ -8,6 +8,10 @@ public protocol XMLSerializable {
     func serialize(_ element: XMLElement) throws
 }
 
+public typealias XMLEncodable = XMLSerializable
+public typealias XMLDecodable = XMLDeserializable
+public typealias XMLCodable = XMLEncodable & XMLDecodable
+
 public extension Optional where Wrapped: XMLSerializable {
 	/// Serializes the object as a child element on the given `XMLElement`. If the object is nil, an attribute of name `nil` with value `"true"` will be added instead.
 	func serialize(to element: XMLElement, localName: String, uri: String) throws {

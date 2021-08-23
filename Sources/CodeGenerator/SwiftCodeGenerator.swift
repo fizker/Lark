@@ -100,7 +100,7 @@ extension SwiftBuiltin {
 
 extension SwiftTypeClass {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
-        let baseType = base?.name ?? "XMLDeserializable"
+        let baseType = base?.name ?? "XMLCodable"
         return indentation.apply(
             toFirstLine: "class \(name): \(baseType) {",
             nestedLines:      linesOfCodeForBody(at:),
