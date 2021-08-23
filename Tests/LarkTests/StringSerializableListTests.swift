@@ -13,6 +13,8 @@ private struct _Foo: StringSerializableList {
             return rawValue
         }
     }
+    typealias Element = Item
+
     var _contents: [Item]
     init(_ contents: [Item]) {
         self._contents = contents
