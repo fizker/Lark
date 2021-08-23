@@ -26,6 +26,35 @@ public protocol StringSerializable {
 }
 
 public extension XMLElement {
+	func elements<T: XMLDeserializable>(forLocalName localName: String, uri: String, nillable: Bool, map: (XMLElement) throws -> T) rethrows -> [T?] {
+		return try elements(forLocalName: localName, uri: uri).map { node in
+			if nillable && node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue == "true" {
+				return nil
+			}
+
+			return try map(node)
+		}
+	}
+
+	func element(forLocalName localName: String, uri: String, nillable: Bool, optional: Bool = false) throws -> XMLElement? {
+		guard let node = elements(forLocalName: localName, uri: uri).first
+		else {
+			if optional {
+				return nil
+			} else {
+				throw XMLDeserializationError.noElementWithName(QualifiedName(uri: uri, localName: localName))
+			}
+		}
+		if nillable && node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue == "true" {
+			return nil
+		}
+		return node
+	}
+
+	func element(forLocalName localName: String, uri: String, optional: Bool) throws -> XMLElement? {
+		return try element(forLocalName: localName, uri: uri, nillable: false, optional: optional)
+	}
+
 	func element(forLocalName localName: String, uri: String) throws -> XMLElement {
 		guard let node = elements(forLocalName: localName, uri: uri).first
 		else { throw XMLDeserializationError.noElementWithName(QualifiedName(uri: uri, localName: localName)) }
