@@ -8,6 +8,44 @@ public protocol XMLSerializable {
     func serialize(_ element: XMLElement) throws
 }
 
+public extension Optional where Wrapped: XMLSerializable {
+	/// Serializes the object as a child element on the given `XMLElement`. If the object is nil, an attribute of name `nil` with value `"true"` will be added instead.
+	func serialize(to element: XMLElement, localName: String, uri: String) throws {
+		let node = element.createChildElement(localName: localName, uri: uri)
+		if let item = self {
+			try item.serialize(element)
+		} else {
+			node.addAttribute(XMLNode.attribute(prefix: "xsi", localName: "nil", uri: NS_XSI, stringValue: "true"))
+		}
+	}
+}
+
+public extension XMLSerializable {
+	/// Serializes the object as a child element on the given `XMLElement`.
+	func serialize(to element: XMLElement, localName: String, uri: String) throws {
+		let node = element.createChildElement(localName: localName, uri: uri)
+		try serialize(node)
+	}
+}
+
+public extension Sequence {
+	func serializeAll(to element: XMLElement, localName: String, uri: String) throws
+	where Element: XMLSerializable
+	{
+		for item in self {
+			try item.serialize(to: element, localName: localName, uri: uri)
+		}
+	}
+
+	func serializeAll<T: XMLSerializable>(to element: XMLElement, localName: String, uri: String) throws
+	where Element == Optional<T>
+	{
+		for item in self {
+			try item.serialize(to: element, localName: localName, uri: uri)
+		}
+	}
+}
+
 public enum XMLDeserializationError: Error {
     case noElementWithName(QualifiedName)
     case cannotDeserialize

@@ -185,49 +185,19 @@ extension SwiftTypeClass {
         return indentation.apply(
             toFirstLine: "\(override)func serialize(_ element: XMLElement) throws {",
             nestedLines:
-            properties.flatMap { property -> [LineOfCode] in
+            properties.map { property -> LineOfCode in
                 let element = property.element.name
-                let setNil = "addAttribute(XMLNode.attribute(prefix: \"xsi\", localName: \"nil\", uri: NS_XSI, stringValue: \"true\"))"
                 switch property.type {
                 case .identifier:
-                    return [
-                        "let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "try \(property.name).serialize(\(property.name)Node)"
-                    ]
+                    return "try \(property.name).serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .optional(.identifier), .optional(.nillable(.identifier)):
-                    return [
-                        "if let \(property.name) = \(property.name) {",
-                        "    let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    try \(property.name).serialize(\(property.name)Node)",
-                        "}"
-                    ]
+                    return "try \(property.name)?.serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .nillable(.identifier):
-                    return [
-                        "let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "if let \(property.name) = \(property.name) {",
-                        "    try \(property.name).serialize(\(property.name)Node)",
-                        "} else {",
-                        "    \(property.name)Node.\(setNil)",
-                        "}"
-                    ]
+                    return "try \(property.name).serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .array(.identifier):
-                    return [
-                        "for item in \(property.name) {",
-                        "    let itemNode = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    try item.serialize(itemNode)",
-                        "}"
-                    ]
+                    return "try \(property.name).serializeAll(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .array(.nillable(.identifier)):
-                    return [
-                        "for item in \(property.name) {",
-                        "    let itemNode = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    if let item = item {",
-                        "        try item.serialize(itemNode)",
-                        "    } else {",
-                        "        itemNode.\(setNil)",
-                        "    }",
-                        "}"
-                    ]
+                    return "try \(property.name).serializeAll(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 default:
                     fatalError("Type \(property.type) not supported")
                 }
