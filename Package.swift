@@ -16,8 +16,16 @@ let package = Package(
         .target(name: "CodeGenerator", dependencies: ["Lark", "SchemaParser"]),
         .target(name: "SchemaParser", dependencies: ["Lark"]),
         .executableTarget(name: "lark-generate-client", dependencies: ["SchemaParser", "CodeGenerator"]),
-        .testTarget(name: "CodeGeneratorTests", dependencies: ["CodeGenerator"]),
+        .testTarget(
+            name: "CodeGeneratorTests",
+            dependencies: ["CodeGenerator"],
+            resources: [ .copy("Inputs") ]
+        ),
         .testTarget(name: "LarkTests", dependencies: ["Lark"]),
-        .testTarget(name: "SchemaParserTests", dependencies: ["SchemaParser"])
+        .testTarget(
+            name: "SchemaParserTests",
+            dependencies: ["SchemaParser"],
+            resources: [ .copy("Inputs") ]
+        )
     ]
 )
