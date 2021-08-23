@@ -518,23 +518,16 @@ extension ServiceMethod: LinesOfCodeConvertible {
             .joined(separator: ", ")
 
         return [
-            "        serialize: { envelope in",
+            "        serialize: (prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\", { node in",
             "            let parameter = \(input.type.name)(\(arguments))",
-            "            let node = XMLElement(prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\")",
-            "            node.addNamespace(XMLNode.namespace(withName: \"ns0\", stringValue: \"\(input.element.uri)\") as! XMLNode)",
             "            try parameter.serialize(node)",
-            "            envelope.body.addChild(node)",
-            "            return envelope",
-            "        },"
+            "        }),"
         ]
     }
 
     func callDeserializeArgument(isLastArgument: Bool) -> [LineOfCode] {
         var lines = [
-            "        deserialize: { envelope -> \(responseType()) in",
-            "            guard let node = envelope.body.elements(forLocalName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\").first else {",
-            "                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: \"\(output.element.uri)\", localName: \"\(output.element.localName)\"))",
-            "            }",
+            "        deserialize: (localName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\", { node -> \(responseType()) in",
             "            let result = try \(output.type.name)(deserialize: node)"
         ]
         if output.type.allProperties.count == 1 {
@@ -547,7 +540,7 @@ extension ServiceMethod: LinesOfCodeConvertible {
             ]
         }
         lines += [
-            "        }\(isLastArgument ? ")" : ",")"
+            "        })\(isLastArgument ? ")" : ",")"
         ]
         return lines
     }

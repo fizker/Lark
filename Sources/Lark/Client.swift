@@ -67,6 +67,28 @@ open class Client {
         return response
     }
 
+    open func call<T>(
+		action: URL,
+		serialize: (`prefix`: String, localName: String, uri: String, serializer: ((XMLElement) throws -> Void)),
+		deserialize: (localName: String, uri: String, deserializer: ((XMLElement) throws -> T))
+    ) throws -> DataResponse<T, Error> {
+        return try call(
+            action: action,
+            serialize: { envelope in
+                let node = XMLElement(prefix: serialize.prefix, localName: serialize.localName, uri: serialize.uri)
+                node.addNamespace(XMLNode.namespace(withName: serialize.prefix, stringValue: serialize.uri) as! XMLNode)
+                try serialize.serializer(node)
+                envelope.body.addChild(node)
+                return envelope
+            },
+            deserialize: { envelope -> T in
+                guard let node = envelope.body.elements(forLocalName: deserialize.localName, uri: deserialize.uri).first else {
+                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: deserialize.uri, localName: deserialize.localName))
+                }
+                return try deserialize.deserializer(node)
+            })
+	}
+
     /// Asynchronously call a method on the service.
     ///
     /// - Parameters:
@@ -90,6 +112,35 @@ open class Client {
         return request.responseSOAP {
             do {
                 completionHandler(.success(try deserialize($0.result.get())))
+            } catch {
+                completionHandler(.failure(error))
+            }
+        }
+    }
+
+    open func call<T>(
+        action: URL,
+		serialize: (`prefix`: String, localName: String, uri: String, serializer: ((XMLElement) throws -> Void)),
+		deserialize: (localName: String, uri: String, deserializer: ((XMLElement) throws -> T)),
+        completionHandler: @escaping (Result<T, Error>) -> Void)
+        -> DataRequest
+    {
+        let request = self.request(action: action, serialize: { envelope in
+			let node = XMLElement(prefix: serialize.prefix, localName: serialize.localName, uri: serialize.uri)
+			node.addNamespace(XMLNode.namespace(withName: serialize.prefix, stringValue: serialize.uri) as! XMLNode)
+			try serialize.serializer(node)
+			envelope.body.addChild(node)
+			return envelope
+		})
+        delegate?.client(self, didSend: request)
+        return request.responseSOAP {
+            do {
+                let envelope = try $0.result.get()
+                guard let node = envelope.body.elements(forLocalName: deserialize.localName, uri: deserialize.uri).first else {
+                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: deserialize.uri, localName: deserialize.localName))
+                }
+                let result = try deserialize.deserializer(node)
+                completionHandler(.success(result))
             } catch {
                 completionHandler(.failure(error))
             }
