@@ -51,10 +51,10 @@ extension Type: Equatable, Hashable {
         }
     }
 
-    public var hashValue: Int {
+    public func hash(into hasher: inout Hasher) {
         switch self {
-        case let .element(qname): return qname.hashValue
-        case let .type(qname): return qname.hashValue
+        case let .element(qname): hasher.combine(qname)
+        case let .type(qname): hasher.combine(qname)
         }
     }
 }

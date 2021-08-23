@@ -28,8 +28,9 @@ extension QualifiedName: Equatable {
 }
 
 extension QualifiedName: Hashable {
-    public var hashValue: Int {
-        return uri.hashValue % 17 + localName.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(uri)
+        hasher.combine(localName)
     }
 }
 

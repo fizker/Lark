@@ -159,14 +159,14 @@ extension WebServiceDescription.Node: Equatable, Hashable {
         }
     }
 
-    var hashValue: Int {
+    func hash(into hasher: inout Hasher) {
         switch self {
-        case let .service(qname): return qname.hashValue
-        case let .binding(qname): return qname.hashValue
-        case let .port(qname): return qname.hashValue
-        case let .message(qname): return qname.hashValue
-        case let .element(qname): return qname.hashValue
-        case let .type(qname): return qname.hashValue
+        case let .service(qname): hasher.combine(qname)
+        case let .binding(qname): hasher.combine(qname)
+        case let .port(qname): hasher.combine(qname)
+        case let .message(qname): hasher.combine(qname)
+        case let .element(qname): hasher.combine(qname)
+        case let .type(qname): hasher.combine(qname)
         }
     }
 }
