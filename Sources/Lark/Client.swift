@@ -148,7 +148,7 @@ open class Client {
 ///     }
 /// }
 /// ```
-public protocol ClientDelegate: class {
+public protocol ClientDelegate: AnyObject {
 
     /// Will be called when a request has been sent. To see the response to the message,
     /// append a response handler; e.g. `request.response { ... }`.
