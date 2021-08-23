@@ -25,6 +25,14 @@ public protocol StringSerializable {
     func serialize() throws -> String
 }
 
+public extension XMLElement {
+	func element(forLocalName localName: String, uri: String) throws -> XMLElement {
+		guard let node = elements(forLocalName: localName, uri: uri).first
+		else { throw XMLDeserializationError.noElementWithName(QualifiedName(uri: uri, localName: localName)) }
+		return node
+	}
+}
+
 // MARK: - Base type serialization
 // MARK: Signed integers
 

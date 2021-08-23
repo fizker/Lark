@@ -160,24 +160,13 @@ extension SwiftTypeClass {
                     let element = property.element.name
                     let throwNoElement = "throw XMLDeserializationError.noElementWithName(QualifiedName(uri: \"\(element.uri)\", localName: \"\(element.localName)\"))"
                     switch property.type {
-                    case let .identifier(identifier):
+                    case .identifier(_):
                         return [
-                            "do {",
-                            "    guard let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first else {",
-                            "        \(throwNoElement)",
-                            "    }",
-                            "    self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "}"
+                            "self.\(property.name) = try .init(deserialize: element.element(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\"))",
                         ]
                     case let .optional(.identifier(identifier)):
                         return [
-                            "do {",
-                            "    if let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first {",
-                            "        self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "    } else {",
-                            "        self.\(property.name) = nil",
-                            "    }",
-                            "}"
+                            "self.\(property.name) = try element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first.map(\(identifier).init(deserialize:))",
                         ]
                     case let .nillable(.identifier(identifier)):
                         return [
