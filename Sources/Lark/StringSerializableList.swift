@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol StringSerializableList: XMLDeserializable, XMLSerializable, Sequence, Collection, ExpressibleByArrayLiteral {
+public protocol StringSerializableList: XMLDeserializable, XMLSerializable, Collection, ExpressibleByArrayLiteral {
     associatedtype Element: StringDeserializable, StringSerializable
 
     var _contents: [Element] { get }
