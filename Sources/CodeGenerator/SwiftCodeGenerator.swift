@@ -442,29 +442,27 @@ extension ServiceMethod: LinesOfCodeConvertible {
             .joined(separator: ", ")
 
         return [
-            "        serialize: (prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\", { node in",
-            "            let parameter = \(input.type.name)(\(arguments))",
-            "            try parameter.serialize(node)",
+            "        serialize: (prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\", {",
+            "            \(input.type.name)(\(arguments))",
             "        }),"
         ]
     }
 
     func callDeserializeArgument(isLastArgument: Bool) -> [LineOfCode] {
         var lines = [
-            "        deserialize: (localName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\", { node -> \(responseType()) in",
-            "            let result = try \(output.type.name)(deserialize: node)"
+            "        deserialize: (localName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\",",
         ]
         if output.type.allProperties.count == 1 {
             lines += [
-                "            return result.\(output.type.allProperties.first!.name)"
+                "            \\\(output.type.name).\(output.type.allProperties.first!.name)"
             ]
         } else {
             lines += [
-                "            return result"
+                "            \\\(output.type.name).self"
             ]
         }
         lines += [
-            "        })\(isLastArgument ? ")" : ",")"
+            "        )\(isLastArgument ? ")" : ",")"
         ]
         return lines
     }

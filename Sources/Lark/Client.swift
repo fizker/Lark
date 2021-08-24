@@ -67,17 +67,17 @@ open class Client {
         return response
     }
 
-    open func call<T>(
+    open func call<T, Decoder: XMLDeserializable>(
 		action: URL,
-		serialize: (`prefix`: String, localName: String, uri: String, serializer: ((XMLElement) throws -> Void)),
-		deserialize: (localName: String, uri: String, deserializer: ((XMLElement) throws -> T))
+		serialize: (`prefix`: String, localName: String, uri: String, serializer: (() -> XMLSerializable)),
+		deserialize: (localName: String, uri: String, resultPath: KeyPath<Decoder, T>)
     ) throws -> DataResponse<T, Error> {
         return try call(
             action: action,
             serialize: { envelope in
                 let node = XMLElement(prefix: serialize.prefix, localName: serialize.localName, uri: serialize.uri)
                 node.addNamespace(XMLNode.namespace(withName: serialize.prefix, stringValue: serialize.uri) as! XMLNode)
-                try serialize.serializer(node)
+                try serialize.serializer().serialize(node)
                 envelope.body.addChild(node)
                 return envelope
             },
@@ -85,7 +85,8 @@ open class Client {
                 guard let node = envelope.body.elements(forLocalName: deserialize.localName, uri: deserialize.uri).first else {
                     throw XMLDeserializationError.noElementWithName(QualifiedName(uri: deserialize.uri, localName: deserialize.localName))
                 }
-                return try deserialize.deserializer(node)
+                let decoder = try Decoder(deserialize: node)
+                return decoder[keyPath: deserialize.resultPath]
             })
 	}
 
@@ -118,17 +119,17 @@ open class Client {
         }
     }
 
-    open func call<T>(
+    open func call<T, Decoder: XMLDeserializable>(
         action: URL,
-		serialize: (`prefix`: String, localName: String, uri: String, serializer: ((XMLElement) throws -> Void)),
-		deserialize: (localName: String, uri: String, deserializer: ((XMLElement) throws -> T)),
+		serialize: (`prefix`: String, localName: String, uri: String, serializer: (() -> XMLSerializable)),
+		deserialize: (localName: String, uri: String, resultPath: KeyPath<Decoder, T>),
         completionHandler: @escaping (Result<T, Error>) -> Void)
         -> DataRequest
     {
         let request = self.request(action: action, serialize: { envelope in
 			let node = XMLElement(prefix: serialize.prefix, localName: serialize.localName, uri: serialize.uri)
 			node.addNamespace(XMLNode.namespace(withName: serialize.prefix, stringValue: serialize.uri) as! XMLNode)
-			try serialize.serializer(node)
+			try serialize.serializer().serialize(node)
 			envelope.body.addChild(node)
 			return envelope
 		})
@@ -139,7 +140,8 @@ open class Client {
                 guard let node = envelope.body.elements(forLocalName: deserialize.localName, uri: deserialize.uri).first else {
                     throw XMLDeserializationError.noElementWithName(QualifiedName(uri: deserialize.uri, localName: deserialize.localName))
                 }
-                let result = try deserialize.deserializer(node)
+                let decoder = try Decoder(deserialize: node)
+                let result = decoder[keyPath: deserialize.resultPath]
                 completionHandler(.success(result))
             } catch {
                 completionHandler(.failure(error))
