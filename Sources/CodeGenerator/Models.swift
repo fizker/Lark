@@ -46,6 +46,7 @@ struct SwiftProperty {
     let name: String
     let type: SwiftType
     let element: Element
+    let options: [GeneratorOption]
 }
 
 public protocol SwiftMetaType: LinesOfCodeConvertible {
@@ -63,6 +64,7 @@ public class SwiftTypeClass: SwiftMetaType {
     let properties: [SwiftProperty]
     let nestedTypes: [SwiftMetaType]
     let members: [LinesOfCodeConvertible]
+    let options: [GeneratorOption]
 
     init(
         name: String,
@@ -70,13 +72,16 @@ public class SwiftTypeClass: SwiftMetaType {
         protocols: [String] = [],
         properties: [SwiftProperty] = [],
         nestedTypes: [SwiftMetaType] = [],
-        members: [LinesOfCodeConvertible] = []) {
+        members: [LinesOfCodeConvertible] = [],
+        options: [GeneratorOption]
+    ) {
         self.name = name
         self.base = base
         self.protocols = protocols
         self.properties = properties
         self.nestedTypes = nestedTypes
         self.members = members
+        self.options = options
     }
 }
 
@@ -84,6 +89,7 @@ public struct SwiftEnum: SwiftMetaType {
     public let name: Identifier
     let rawType: SwiftType
     let cases: [String: String]
+    let options: [GeneratorOption]
 }
 
 public struct SwiftTypealias: SwiftMetaType {
@@ -108,6 +114,7 @@ public struct SwiftClientClass: SwiftMetaType {
     public let name: Identifier
     let methods: [ServiceMethod]
     let port: Service.Port
+    let options: [GeneratorOption]
 }
 
 struct ServiceMethod {
@@ -118,12 +125,14 @@ struct ServiceMethod {
     let output: Message
     let action: URL?
     let documentation: String?
+    let options: [GeneratorOption]
 
-    init(operation: PortType.Operation, input: Message, output: Message, action: URL?, documentation: String?) {
+    init(operation: PortType.Operation, input: Message, output: Message, action: URL?, documentation: String?, options: [GeneratorOption]) {
         name = operation.name.localName.toSwiftPropertyName()
         self.input = input
         self.output = output
         self.action = action
         self.documentation = documentation
+        self.options = options
     }
 }

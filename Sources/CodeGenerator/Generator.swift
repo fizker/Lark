@@ -78,7 +78,7 @@ enum ElementHierarchy {
     typealias Graph = CodeGenerator.Graph<Node>
 }
 
-public func generate(webService: WebServiceDescription, service: Service) throws -> String {
+public func generate(webService: WebServiceDescription, service: Service, options: [GeneratorOption]) throws -> String {
     // Verify that all the types can be satisfied.
     try webService.verify()
 
@@ -96,11 +96,11 @@ public func generate(webService: WebServiceDescription, service: Service) throws
     // TODO: Verify that the service is WS-I BP compliant.
     // e.g. all messages should have 1 part element.
 
-    let types = try generateTypes(inSchema: webService.schema)
+    let types = try generateTypes(inSchema: webService.schema, options: options)
 
     var clients = [SwiftClientClass]()
     for service in webService.services {
-        clients.append(try service.toSwift(webService: webService, types: types))
+        clients.append(try service.toSwift(webService: webService, types: types, options: options))
     }
 
     let sortedTypes = types.values.sorted(by: { $0.name <= $1.name })
@@ -108,7 +108,7 @@ public func generate(webService: WebServiceDescription, service: Service) throws
     return SwiftCodeGenerator.generateCode(for: sortedTypes, clients)
 }
 
-func generateTypes(inSchema schema: Schema) throws -> Types {
+func generateTypes(inSchema schema: Schema, options: [GeneratorOption]) throws -> Types {
     var mapping: TypeMapping = baseTypes.dictionary { (Type.type($0.0), $0.1) }
     var scope: Set<String> = globalScope
     var hierarchy = ElementHierarchy.Graph()
@@ -183,14 +183,14 @@ func generateTypes(inSchema schema: Schema) throws -> Types {
     for node in hierarchy.traverse {
         switch node {
         case let .element(name):
-            types[node] = elements[name]!.toSwift(mapping: mapping, types: types)
+            types[node] = elements[name]!.toSwift(mapping: mapping, types: types, options: options)
         case let .type(name):
             if baseTypes[name] != nil {
                 continue
             } else if let complex = complexes[name] {
-                types[node] = complex.toSwift(mapping: mapping, types: types)
+                types[node] = complex.toSwift(mapping: mapping, types: types, options: options)
             } else if let simple = simples[name] {
-                types[node] = try simple.toSwift(mapping: mapping, types: types)
+                types[node] = try simple.toSwift(mapping: mapping, types: types, options: options)
             } else {
                 throw GeneratorError.missingType(name)
             }
@@ -201,8 +201,8 @@ func generateTypes(inSchema schema: Schema) throws -> Types {
 }
 
 extension Schema {
-    public func generateCode() throws -> [LineOfCode] {
-        let types = try generateTypes(inSchema: self).values.sorted(by: { $0.name <= $1.name })
+    public func generateCode(options: [GeneratorOption]) throws -> [LineOfCode] {
+        let types = try generateTypes(inSchema: self, options: options).values.sorted(by: { $0.name <= $1.name })
         return Array(types).flatMap { $0.toLinesOfCode(at: Indentation(chars: "    ")) }
     }
 }

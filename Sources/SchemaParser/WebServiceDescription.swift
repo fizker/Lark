@@ -3,6 +3,14 @@
 import Foundation
 import Lark
 
+public enum AccessLevel: String, CaseIterable {
+	case `public`, open, `internal`
+}
+
+public enum GeneratorOption {
+	case accessLevel(AccessLevel)
+}
+
 public struct Message {
     public struct Part {
         public let name: QualifiedName

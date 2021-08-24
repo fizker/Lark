@@ -31,7 +31,7 @@ func XCTAssertCode(definitionFile: URL, expectedCodeFile: URL, file: StaticStrin
     do {
         let webService = try parseWebServiceDescription(contentsOf: definitionFile)
         let expected = try readlines(expectedCodeFile)
-        let actual = try generate(webService: webService, service: webService.services.first!).components(separatedBy: "\n")
+        let actual = try generate(webService: webService, service: webService.services.first!, options: []).components(separatedBy: "\n")
         XCTAssertCode(actual: actual, expected: expected)
     } catch {
         XCTFail("Error was thrown; \(error)", file: file, line: line)

@@ -23,7 +23,7 @@ class CodeGeneratorTests: XCTestCase {
                 ))
             ))
         ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("enum.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("enum.txt"))
     }
 
     func testList() throws {
@@ -41,7 +41,7 @@ class CodeGeneratorTests: XCTestCase {
                 content: .list(itemType: qname("FooBar"))
             ))
         ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("list.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("list.txt"))
     }
 
     func testListWrapped() throws {
@@ -58,7 +58,7 @@ class CodeGeneratorTests: XCTestCase {
                     ))
                 ))
             ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("list_wrapped.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("list_wrapped.txt"))
     }
 
     func testPattern() throws {
@@ -72,7 +72,7 @@ class CodeGeneratorTests: XCTestCase {
                     ))
                 ))
             ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: [
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: [
             "typealias Guid = String"
             ])
     }
@@ -84,7 +84,7 @@ class CodeGeneratorTests: XCTestCase {
                 content: .empty
             ))
         ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("complex_empty.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("complex_empty.txt"))
     }
 
     func testComplexSequence() throws {
@@ -102,7 +102,7 @@ class CodeGeneratorTests: XCTestCase {
                 ))
             ))
         ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("complex_sequence.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("complex_sequence.txt"))
     }
 
     func testElementWithComplexBase() throws {
@@ -126,7 +126,7 @@ class CodeGeneratorTests: XCTestCase {
                 nillable: false
                 ))
             ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("element_with_complex_base.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("element_with_complex_base.txt"))
     }
 
     func testComplexWithComplexBase() throws {
@@ -146,36 +146,36 @@ class CodeGeneratorTests: XCTestCase {
                 nillable: false
                 ))
             ])
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("complex_with_complex_base.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("complex_with_complex_base.txt"))
     }
 
     func testComplexExtension() throws {
         let schema = try deserialize("complex_extension.xsd")
-        XCTAssertCode(actual: try schema.generateCode(), expected: try readlines("complex_extension.txt"))
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: try readlines("complex_extension.txt"))
     }
 
     func testNillableIdentifier() throws {
         let schema = try deserialize("nillable_identifier.xsd")
         let expected = try readlines("nillable_identifier.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
     func testNillableOptional() throws {
         let schema = try deserialize("nillable_optional.xsd")
         let expected = try readlines("nillable_optional.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
     func testNillableArray() throws {
         let schema = try deserialize("nillable_array.xsd")
         let expected = try readlines("nillable_array.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
     func testComplexNestedType() throws {
         let schema = try deserialize("complex_nested_type.xsd")
         let expected = try readlines("complex_nested_type.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
 //    This is not WS-I compliant.
@@ -208,20 +208,20 @@ class CodeGeneratorTests: XCTestCase {
     func _testElementRef() throws {
         let schema = try deserialize("element_ref.xsd")
         let expected = try readlines("element_ref.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
     // TODO: implement this
     func _testComplexSimpleContent() throws {
         let schema = try deserialize("complex_simple_content.xsd")
         let expected = try readlines("complex_simple_content.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 
     // TODO: implement this
     func _testComplexChoice() throws {
         let schema = try deserialize("complex_choice.xsd")
         let expected = try readlines("complex_choice.txt")
-        XCTAssertCode(actual: try schema.generateCode(), expected: expected)
+        XCTAssertCode(actual: try schema.generateCode(options: []), expected: expected)
     }
 }

@@ -106,7 +106,7 @@ extension SwiftTypeClass {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
         let baseType = base?.name ?? "XMLCodable"
         return indentation.apply(
-            toFirstLine: "class \(name): \(baseType) {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)class \(name): \(baseType) {",
             nestedLines:      linesOfCodeForBody(at:),
             andLastLine: "}")
     }
@@ -147,7 +147,7 @@ extension SwiftTypeClass {
         let signature = arguments.joined(separator: ", ")
 
         return indentation.apply(
-            toFirstLine: "\(override)init(\(signature)) {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)\(override)init(\(signature)) {",
             nestedLines:
                 properties.map { property in
                     "self.\(property.name) = \(property.name)"
@@ -158,7 +158,7 @@ extension SwiftTypeClass {
     private func deserializer(at indentation: Indentation) -> [LineOfCode] {
         let superInit: [LineOfCode] = base.map { _ in ["try super.init(deserialize: element)"] } ?? []
         return indentation.apply(
-            toFirstLine: "required init(deserialize element: XMLElement) throws {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)required init(deserialize element: XMLElement) throws {",
             nestedLines:
                 properties.map { property -> LineOfCode in
                     let element = property.element.name
@@ -187,7 +187,7 @@ extension SwiftTypeClass {
         let override = base.map { _ in "override " } ?? ""
         let superSerialize: [LineOfCode] = base.map { _ in ["try super.serialize(element)"] } ?? []
         return indentation.apply(
-            toFirstLine: "\(override)func serialize(_ element: XMLElement) throws {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)\(override)func serialize(_ element: XMLElement) throws {",
             nestedLines:
             properties.map { property -> LineOfCode in
                 let element = property.element.name
@@ -256,7 +256,7 @@ extension SwiftType {
 
 extension SwiftProperty {
     func toLineOfCode() -> LineOfCode {
-        return "var \(name): \(type.toSwiftCode())"
+        return "\(options.generatedCodeForAccessLevel)var \(name): \(type.toSwiftCode())"
     }
 }
 
@@ -269,7 +269,7 @@ extension SwiftParameter {
 extension SwiftEnum {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
         return indentation.apply(
-            toFirstLine: "enum \(name): \(rawType.toSwiftCode()), XMLSerializable, XMLDeserializable, StringSerializable, StringDeserializable {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)enum \(name): \(rawType.toSwiftCode()), XMLSerializable, XMLDeserializable, StringSerializable, StringDeserializable {",
             nestedLines:      linesOfCodeForBody(at:),
             andLastLine: "}")
     }
@@ -295,7 +295,7 @@ extension SwiftEnum {
     private func linesOfCodeForXMLDeserializer(at indentation: Indentation) -> [LineOfCode] {
         // TODO: no force unwraps
         return indentation.apply(
-            toFirstLine: "init(deserialize element: XMLElement) throws {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)init(deserialize element: XMLElement) throws {",
             nestedLines: ["self.init(rawValue: element.stringValue!)!"],
             andLastLine: "}")
     }
@@ -303,7 +303,7 @@ extension SwiftEnum {
     private func linesOfCodeForXMLSerializer(at indentation: Indentation) -> [LineOfCode] {
         // TODO: no force unwraps
         return indentation.apply(
-            toFirstLine: "func serialize(_ element: XMLElement) throws {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)func serialize(_ element: XMLElement) throws {",
             nestedLines: ["element.stringValue = self.rawValue"],
             andLastLine: "}")
     }
@@ -311,7 +311,7 @@ extension SwiftEnum {
     private func linesOfCodeForStringDeserializer(at indentation: Indentation) -> [LineOfCode] {
         // TODO: no force unwraps
         return indentation.apply(
-            toFirstLine: "init(string: String) throws {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)init(string: String) throws {",
             nestedLines: ["self.init(rawValue: string)!"],
             andLastLine: "}")
     }
@@ -319,7 +319,7 @@ extension SwiftEnum {
     private func linesOfCodeForStringSerializer(at indentation: Indentation) -> [LineOfCode] {
         // TODO: no force unwraps
         return indentation.apply(
-            toFirstLine: "func serialize() throws -> String {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)func serialize() throws -> String {",
             nestedLines: ["return self.rawValue"],
             andLastLine: "}")
     }
@@ -351,10 +351,32 @@ extension SwiftList {
 
 // MARK: - SOAP Client
 
+extension AccessLevel {
+	var generatedCode: String {
+		switch self {
+		case .internal: return ""
+		case .open: return "open "
+		case .public: return "public "
+		}
+	}
+}
+extension Array where Element == GeneratorOption {
+	var generatedCodeForAccessLevel: String {
+		for option in self {
+			switch option {
+			case let .accessLevel(level):
+				return level.generatedCode
+			}
+		}
+
+		return ""
+	}
+}
+
 extension SwiftClientClass {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
         return indentation.apply(
-            toFirstLine: "class \(name): Lark.Client {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)class \(name): Lark.Client {",
             nestedLines:      linesOfCodeForMembers(at:),
             andLastLine: "}")
     }
@@ -371,13 +393,13 @@ extension SwiftClientClass {
         }
 
         return [
-            "static let defaultEndpoint = URL(string: \"\(endpoint)\")!"
+            "\(options.generatedCodeForAccessLevel)static let defaultEndpoint = URL(string: \"\(endpoint)\")!"
             ].map { indentation.apply(toLineOfCode: $0) }
     }
 
     private func initializer(at indentation: Indentation) -> [LineOfCode] {
         return indentation.apply(
-            toFirstLine: "override init(endpoint: URL = \(name).defaultEndpoint, session: Session = .init()) {",
+            toFirstLine: "\(options.generatedCodeForAccessLevel)override init(endpoint: URL = \(name).defaultEndpoint, session: Session = .init()) {",
             nestedLines: [
                 "super.init(endpoint: endpoint, session: session)"
             ],
@@ -395,7 +417,7 @@ extension ServiceMethod: LinesOfCodeConvertible {
 
         let lines = [
             "/// Call \(name) synchronously",
-            "func \(name)(\(signature)) throws -> \(responseType()) {",
+            "\(options.generatedCodeForAccessLevel)func \(name)(\(signature)) throws -> \(responseType()) {",
             "    let response = try call("
             ] +
             callActionArgument() +
@@ -413,7 +435,7 @@ extension ServiceMethod: LinesOfCodeConvertible {
 
         let lines = [
             "/// Call \(name) asynchronously",
-            "@discardableResult func \(name)(\(signature)) -> DataRequest {",
+            "@discardableResult \(options.generatedCodeForAccessLevel)func \(name)(\(signature)) -> DataRequest {",
             "    return call("
             ] +
             callActionArgument() +
