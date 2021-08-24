@@ -4,12 +4,15 @@ import PackageDescription
 
 let package = Package(
     name: "Lark",
+    platforms: [
+        .macOS(.v10_12),
+    ],
     products: [
         .library(name: "Lark", targets: ["Lark"]),
         .executable(name: "lark-generate-client", targets: ["lark-generate-client"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/Alamofire/Alamofire.git", from: "4.5.0")
+        .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.4.3")
     ],
     targets: [
         .target(name: "Lark", dependencies: ["Alamofire"]),

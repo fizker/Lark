@@ -16,8 +16,8 @@ open class Client {
     /// URL of the service to send the HTTP messages.
     public let endpoint: URL
 
-    /// `Alamofire.SessionManager` that manages the the underlying `URLSession`.
-    public let sessionManager: SessionManager
+    /// `Alamofire.Session` that manages the the underlying `URLSession`.
+    public let session: Session
 
     /// SOAP headers that will be added on every outgoing `Envelope` (message).
     open var headers: [HeaderSerializable] = []
@@ -29,14 +29,14 @@ open class Client {
     ///
     /// - Parameters:
     ///   - endpoint: URL of the service to send the HTTP messages.
-    ///   - sessionManager: an `Alamofire.SessionManager` that manages the
+    ///   - session: an `Alamofire.Session` that manages the
     ///     the underlying `URLSession`.
     public init(
         endpoint: URL,
-        sessionManager: SessionManager = SessionManager())
+        session: Session = .init())
     {
         self.endpoint = endpoint
-        self.sessionManager = sessionManager
+        self.session = session
     }
 
     /// Synchronously call a method on the service.
@@ -53,19 +53,14 @@ open class Client {
         action: URL,
         serialize: @escaping (Envelope) throws -> Envelope,
         deserialize: @escaping (Envelope) throws -> T)
-        throws -> DataResponse<T>
+        throws -> DataResponse<T, Error>
     {
         let semaphore = DispatchSemaphore(value: 0)
-        var response: DataResponse<T>!
+        var response: DataResponse<T, Error>!
         let request = self.request(action: action, serialize: serialize)
         delegate?.client(self, didSend: request)
         request.responseSOAP(queue: DispatchQueue.global(qos: .default)) {
-            response = DataResponse(
-                request: $0.request,
-                response: $0.response,
-                data: $0.data,
-                result: $0.result.map { try deserialize($0) },
-                timeline: $0.timeline)
+            response = $0.tryMap { try deserialize($0) }
             semaphore.signal()
         }
         _ = semaphore.wait(timeout: .distantFuture)
@@ -87,14 +82,14 @@ open class Client {
         action: URL,
         serialize: @escaping (Envelope) throws -> Envelope,
         deserialize: @escaping (Envelope) throws -> T,
-        completionHandler: @escaping (Result<T>) -> Void)
+        completionHandler: @escaping (Result<T, Error>) -> Void)
         -> DataRequest
     {
         let request = self.request(action: action, serialize: serialize)
         delegate?.client(self, didSend: request)
         return request.responseSOAP {
             do {
-                completionHandler(.success(try deserialize($0.result.resolve())))
+                completionHandler(.success(try deserialize($0.result.get())))
             } catch {
                 completionHandler(.failure(error))
             }
@@ -118,7 +113,7 @@ open class Client {
             action: action,
             serialize: serialize,
             headers: headers)
-        return sessionManager.request(call)
+        return session.request(call)
             .validate(contentType: ["text/xml"])
             .validate(statusCode: [200, 500])
             .deserializeFault()
@@ -185,8 +180,12 @@ extension DataRequest {
     @discardableResult
     func responseSOAP(
         queue: DispatchQueue? = nil,
-        completionHandler: @escaping (_ response: DataResponse<Envelope>) -> Void)
+        completionHandler: @escaping (_ response: AFDataResponse<Envelope>) -> Void)
         -> Self {
-        return response(queue: queue, responseSerializer: EnvelopeDeserializer(), completionHandler: completionHandler)
+        if let queue = queue {
+            return response(queue: queue, responseSerializer: EnvelopeDeserializer(), completionHandler: completionHandler)
+        } else {
+            return response(responseSerializer: EnvelopeDeserializer(), completionHandler: completionHandler)
+		}
     }
 }

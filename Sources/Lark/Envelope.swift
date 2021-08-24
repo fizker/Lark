@@ -47,19 +47,16 @@ public struct Envelope {
 }
 
 struct EnvelopeDeserializer: DataResponseSerializerProtocol {
-    typealias SerializedObject = Envelope
-    let serializeResponse: (URLRequest?, HTTPURLResponse?, Data?, Error?) -> Alamofire.Result<Envelope> = {
-        if let error = $3 {
-            return .failure(error)
+    func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) throws -> Envelope {
+        if let error = error {
+            throw error
         }
-        do {
-            if let data = $2 {
-                let document = try XMLDocument(data: data, options: [])
-                return .success(try Envelope(document: document))
-            }
-        } catch {
-            return .failure(error)
+
+        if let data = data {
+            let document = try XMLDocument(data: data, options: [])
+            return try Envelope(document: document)
         }
+
         abort()
     }
 }
