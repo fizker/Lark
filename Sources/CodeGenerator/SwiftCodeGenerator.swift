@@ -60,11 +60,15 @@ public struct Indentation {
         precondition(level >= 0)
         self.chars = chars
         self.level = level
-        self.value = String(repeating: chars, count: level)
+        self.value = String(repeating: "\t", count: level)
     }
 
+	private func normalize(_ line: LineOfCode) -> LineOfCode {
+		return line.replacingOccurrences(of: chars, with: "\t", options: [ .anchored ])
+	}
+
     func apply(toLineOfCode lineOfCode: LineOfCode) -> LineOfCode {
-        return value + lineOfCode
+        return value + normalize(lineOfCode)
     }
 
     func apply(toFirstLine firstLine: LineOfCode,
