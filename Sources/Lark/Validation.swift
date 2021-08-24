@@ -11,7 +11,7 @@ extension DataRequest {
     func deserializeFault() -> Self {
         return validate { _, response, data in
             switch response.statusCode {
-            case 200: return .success
+            case 200: return .success(())
             case 500:
                 do {
                     let document = try XMLDocument(data: data!, options: [])

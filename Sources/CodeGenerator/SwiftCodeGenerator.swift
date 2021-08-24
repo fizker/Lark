@@ -449,9 +449,9 @@ extension SwiftClientClass {
 
     private func initializer(at indentation: Indentation) -> [LineOfCode] {
         return indentation.apply(
-            toFirstLine: "override init(endpoint: URL = \(name).defaultEndpoint, sessionManager: SessionManager = SessionManager()) {",
+            toFirstLine: "override init(endpoint: URL = \(name).defaultEndpoint, session: Session = .init()) {",
             nestedLines: [
-                "super.init(endpoint: endpoint, sessionManager: sessionManager)"
+                "super.init(endpoint: endpoint, session: session)"
             ],
             andLastLine: "}")
     }
@@ -474,14 +474,14 @@ extension ServiceMethod: LinesOfCodeConvertible {
             callSerializeArgument() +
             callDeserializeArgument(isLastArgument: true) +
             [
-            "    return try response.result.resolve()",
+            "    return try response.result.get()",
             "}"
         ]
         return lines.map(indentation.apply(toLineOfCode:))
     }
 
     func asyncCall(at indentation: Indentation) -> [LineOfCode] {
-        let signature = (input.type.arguments + ["completionHandler: @escaping (Result<\(responseType())>) -> Void"]).joined(separator: ", ")
+        let signature = (input.type.arguments + ["completionHandler: @escaping (Result<\(responseType()), Error>) -> Void"]).joined(separator: ", ")
 
         let lines = [
             "/// Call \(name) asynchronously",
