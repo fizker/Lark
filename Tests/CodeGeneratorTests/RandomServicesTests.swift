@@ -20,7 +20,7 @@ class RandomServicesTests: XCTestCase {
     func _test(url: URL, file: StaticString = #file, line: UInt = #line) {
         do {
             let webService = try parseWebServiceDescription(contentsOf: url)
-            _ = try generate(webService: webService, service: webService.services.first!).components(separatedBy: "\n")
+            _ = try generate(webService: webService, service: webService.services.first!, options: []).components(separatedBy: "\n")
         } catch {
             XCTFail("\(error)", file: file, line: line)
         }

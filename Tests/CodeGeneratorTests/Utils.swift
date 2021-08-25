@@ -27,11 +27,11 @@ func readlines(_ url: URL) throws -> [String] {
     return Array(try String(contentsOf: url).components(separatedBy: "\n").dropLast())
 }
 
-func XCTAssertCode(definitionFile: URL, expectedCodeFile: URL, file: StaticString = #file, line: UInt = #line) {
+func XCTAssertCode(definitionFile: URL, expectedCodeFile: URL, options: [GeneratorOption] = [], file: StaticString = #file, line: UInt = #line) {
     do {
         let webService = try parseWebServiceDescription(contentsOf: definitionFile)
         let expected = try readlines(expectedCodeFile)
-        let actual = try generate(webService: webService, service: webService.services.first!).components(separatedBy: "\n")
+        let actual = try generate(webService: webService, service: webService.services.first!, options: options).components(separatedBy: "\n")
         XCTAssertCode(actual: actual, expected: expected)
     } catch {
         XCTFail("Error was thrown; \(error)", file: file, line: line)

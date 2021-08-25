@@ -5,7 +5,7 @@ import Lark
 // MARK: - SOAP Types
 
 extension ComplexType {
-    public func toSwift(name: String? = nil, mapping: TypeMapping, types: Types) -> SwiftTypeClass {
+    public func toSwift(name: String? = nil, mapping: TypeMapping, types: Types, options: [GeneratorOption]) -> SwiftTypeClass {
         precondition(name != nil || self.name != nil, "No name specified for complexType")
 
         let name = name ?? mapping[.type(self.name!)]!
@@ -15,7 +15,7 @@ extension ComplexType {
         switch self.content {
         case let .sequence(sequence):
             base = nil
-            (properties, nestedTypes) = sequenceToSwift(name: name, sequence: sequence, mapping: mapping, types: types)
+            (properties, nestedTypes) = sequenceToSwift(name: name, sequence: sequence, mapping: mapping, types: types, options: options)
         case let .complex(complex):
             base = (types[.type(complex.base)]! as! SwiftTypeClass)
             let content: Content.ComplexContent.Content.Content
@@ -27,21 +27,22 @@ extension ComplexType {
             case .empty:
                 (properties, nestedTypes) = ([], [])
             case let .sequence(sequence):
-                (properties, nestedTypes) = sequenceToSwift(name: name, sequence: sequence, mapping: mapping, types: types)
+                (properties, nestedTypes) = sequenceToSwift(name: name, sequence: sequence, mapping: mapping, types: types, options: options)
             }
         case .empty:
             (base, properties, nestedTypes) = (nil, [], [])
         }
 
-        return SwiftTypeClass(name: name, base: base, properties: properties, nestedTypes: nestedTypes)
+        return SwiftTypeClass(name: name, base: base, properties: properties, nestedTypes: nestedTypes, options: options)
     }
 
     func sequenceToSwift(
         name: Identifier,
         sequence: Content.Sequence,
         mapping: TypeMapping,
-        types: Types)
-        -> (properties: [SwiftProperty], nested: [SwiftMetaType])
+        types: Types,
+        options: [GeneratorOption]
+    ) -> (properties: [SwiftProperty], nested: [SwiftMetaType])
     {
         var properties: [SwiftProperty] = []
         var nestedTypes: [SwiftMetaType] = []
@@ -51,16 +52,20 @@ extension ComplexType {
                 properties.append(SwiftProperty(
                     name: element.name.localName.toSwiftPropertyName(),
                     type: .init(type: mapping[.type(base)]!, element: element),
-                    element: element))
+                    element: element,
+                    options: options
+                ))
             case let .complex(complex):
                 // @todo don't generate type name here, but delegate to something 
                 // like a `Scope` type that handles inherited scope as well.
                 let type = element.name.localName.toSwiftTypeName()
-                nestedTypes.append(complex.toSwift(name: type, mapping: mapping, types: types))
+                nestedTypes.append(complex.toSwift(name: type, mapping: mapping, types: types, options: options))
                 properties.append(SwiftProperty(
                     name: element.name.localName.toSwiftPropertyName(),
                     type: .init(type: type, element: element),
-                    element: element))
+                    element: element,
+                    options: options
+                ))
             }
         }
         return (properties, nestedTypes)
@@ -68,37 +73,37 @@ extension ComplexType {
 }
 
 extension SimpleType {
-    public func toSwift(name: String? = nil, mapping: TypeMapping, types: Types) throws -> SwiftMetaType {
+    public func toSwift(name: String? = nil, mapping: TypeMapping, types: Types, options: [GeneratorOption]) throws -> SwiftMetaType {
         let name = name ?? mapping[.type(self.name!)]!
         switch self.content {
         case let .list(itemType):
             let itemName = mapping[.type(itemType)]!
             return SwiftList(name: name, element: .identifier(itemName), nestedTypes: [])
         case let .listWrapped(wrapped):
-            let nested = try wrapped.toSwift(name: "Element", mapping: mapping, types: types)
+            let nested = try wrapped.toSwift(name: "Element", mapping: mapping, types: types, options: options)
             return SwiftList(name: name, element: .identifier(nested.name), nestedTypes: [nested])
         case let .restriction(restriction):
             if restriction.enumeration.count == 0 {
                 // TODO: what to do with the pattern?
                 let baseType = mapping[.type(restriction.base)]!
-                return SwiftTypealias(name: name, type: .identifier(baseType))
+                return SwiftTypealias(name: name, type: .identifier(baseType), options: options)
             } else {
                 let cases = restriction.enumeration.dictionary({ ($0.toSwiftPropertyName(), $0) })
-                return SwiftEnum(name: name, rawType: .identifier("String"), cases: cases)
+                return SwiftEnum(name: name, rawType: .identifier("String"), cases: cases, options: options)
             }
         }
     }
 }
 
 extension Element {
-    public func toSwift(mapping: TypeMapping, types: Types) -> SwiftMetaType {
+    public func toSwift(mapping: TypeMapping, types: Types, options: [GeneratorOption]) -> SwiftMetaType {
         let name = mapping[.element(self.name)]!
         switch self.content {
         case let .base(base):
             let baseType = types[.type(base)]!
-            return SwiftTypealias(name: name, type: .init(type: baseType.name, element: self))
+            return SwiftTypealias(name: name, type: .init(type: baseType.name, element: self), options: options)
         case let .complex(complex):
-            return complex.toSwift(name: name, mapping: mapping, types: types)
+            return complex.toSwift(name: name, mapping: mapping, types: types, options: options)
         }
     }
 }
@@ -106,7 +111,7 @@ extension Element {
 // MARK: - SOAP Client
 
 extension Service {
-    public func toSwift(webService: WebServiceDescription, types: Types) throws -> SwiftClientClass {
+    public func toSwift(webService: WebServiceDescription, types: Types, options: [GeneratorOption]) throws -> SwiftClientClass {
         // SOAP 1.1 port
         let port = ports.first { if case .soap11 = $0.address { return true } else { return false } }!
         let binding = webService.bindings.first { $0.name == port.binding }!
@@ -151,13 +156,16 @@ extension Service {
             .map { operation -> ServiceMethod in
                 let input = try message(operation.port.inputMessage)
                 let output = try message(operation.port.outputMessage)
-                return ServiceMethod(operation: operation.port,
-                                     input: input,
-                                     output: output,
-                                     action: operation.binding.action,
-                                     documentation: operation.port.documentation)
+                return ServiceMethod(
+                    operation: operation.port,
+                    input: input,
+                    output: output,
+                    action: operation.binding.action,
+                    documentation: operation.port.documentation,
+                    options: options
+                )
             }
 
-        return SwiftClientClass(name: name, methods: methods, port: port)
+        return SwiftClientClass(name: name, methods: methods, port: port, options: options)
     }
 }
