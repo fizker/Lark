@@ -1,25 +1,12 @@
-class Employee: XMLDeserializable {
-    var nicknames: [String?]
-    init(nicknames: [String?]) {
-        self.nicknames = nicknames
-    }
-    required init(deserialize element: XMLElement) throws {
-        self.nicknames = try element.elements(forLocalName: "nicknames", uri: "http://tempuri.org/tns").map { node in
-            if node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue != "true" {
-                return try String(deserialize: node)
-            } else {
-                return nil
-            }
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        for item in nicknames {
-            let itemNode = element.createChildElement(localName: "nicknames", uri: "http://tempuri.org/tns")
-            if let item = item {
-                try item.serialize(itemNode)
-            } else {
-                itemNode.addAttribute(XMLNode.attribute(prefix: "xsi", localName: "nil", uri: NS_XSI, stringValue: "true"))
-            }
-        }
-    }
+class Employee: XMLCodable {
+	var nicknames: [String?]
+	init(nicknames: [String?]) {
+		self.nicknames = nicknames
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.nicknames = try element.elements(forLocalName: "nicknames", uri: "http://tempuri.org/tns", nillable: true, map: String.init(deserialize:))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try nicknames.serializeAll(to: element, localName: "nicknames", uri: "http://tempuri.org/tns")
+	}
 }

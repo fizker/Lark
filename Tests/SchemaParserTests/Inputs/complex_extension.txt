@@ -1,70 +1,40 @@
 typealias Employee = Fullpersoninfo
 class Fullpersoninfo: Personinfo {
-    var address: String
-    var city: String
-    var country: String
-    init(firstname: String, lastname: String, address: String, city: String, country: String) {
-        self.address = address
-        self.city = city
-        self.country = country
-        super.init(firstname: firstname, lastname: lastname)
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            guard let node = element.elements(forLocalName: "address", uri: "http://tempuri.org/tns").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/tns", localName: "address"))
-            }
-            self.address = try String(deserialize: node)
-        }
-        do {
-            guard let node = element.elements(forLocalName: "city", uri: "http://tempuri.org/tns").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/tns", localName: "city"))
-            }
-            self.city = try String(deserialize: node)
-        }
-        do {
-            guard let node = element.elements(forLocalName: "country", uri: "http://tempuri.org/tns").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/tns", localName: "country"))
-            }
-            self.country = try String(deserialize: node)
-        }
-        try super.init(deserialize: element)
-    }
-    override func serialize(_ element: XMLElement) throws {
-        let addressNode = element.createChildElement(localName: "address", uri: "http://tempuri.org/tns")
-        try address.serialize(addressNode)
-        let cityNode = element.createChildElement(localName: "city", uri: "http://tempuri.org/tns")
-        try city.serialize(cityNode)
-        let countryNode = element.createChildElement(localName: "country", uri: "http://tempuri.org/tns")
-        try country.serialize(countryNode)
-        try super.serialize(element)
-    }
+	var address: String
+	var city: String
+	var country: String
+	init(firstname: String, lastname: String, address: String, city: String, country: String) {
+		self.address = address
+		self.city = city
+		self.country = country
+		super.init(firstname: firstname, lastname: lastname)
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.address = try .init(deserialize: element.element(forLocalName: "address", uri: "http://tempuri.org/tns"))
+		self.city = try .init(deserialize: element.element(forLocalName: "city", uri: "http://tempuri.org/tns"))
+		self.country = try .init(deserialize: element.element(forLocalName: "country", uri: "http://tempuri.org/tns"))
+		try super.init(deserialize: element)
+	}
+	override func serialize(_ element: XMLElement) throws {
+		try address.serialize(to: element, localName: "address", uri: "http://tempuri.org/tns")
+		try city.serialize(to: element, localName: "city", uri: "http://tempuri.org/tns")
+		try country.serialize(to: element, localName: "country", uri: "http://tempuri.org/tns")
+		try super.serialize(element)
+	}
 }
-class Personinfo: XMLDeserializable {
-    var firstname: String
-    var lastname: String
-    init(firstname: String, lastname: String) {
-        self.firstname = firstname
-        self.lastname = lastname
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            guard let node = element.elements(forLocalName: "firstname", uri: "http://tempuri.org/tns").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/tns", localName: "firstname"))
-            }
-            self.firstname = try String(deserialize: node)
-        }
-        do {
-            guard let node = element.elements(forLocalName: "lastname", uri: "http://tempuri.org/tns").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/tns", localName: "lastname"))
-            }
-            self.lastname = try String(deserialize: node)
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        let firstnameNode = element.createChildElement(localName: "firstname", uri: "http://tempuri.org/tns")
-        try firstname.serialize(firstnameNode)
-        let lastnameNode = element.createChildElement(localName: "lastname", uri: "http://tempuri.org/tns")
-        try lastname.serialize(lastnameNode)
-    }
+class Personinfo: XMLCodable {
+	var firstname: String
+	var lastname: String
+	init(firstname: String, lastname: String) {
+		self.firstname = firstname
+		self.lastname = lastname
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.firstname = try .init(deserialize: element.element(forLocalName: "firstname", uri: "http://tempuri.org/tns"))
+		self.lastname = try .init(deserialize: element.element(forLocalName: "lastname", uri: "http://tempuri.org/tns"))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try firstname.serialize(to: element, localName: "firstname", uri: "http://tempuri.org/tns")
+		try lastname.serialize(to: element, localName: "lastname", uri: "http://tempuri.org/tns")
+	}
 }

@@ -1,22 +1,12 @@
-class Employee: XMLDeserializable {
-    var manager: String?
-    init(manager: String? = nil) {
-        self.manager = manager
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            if let node = element.elements(forLocalName: "manager", uri: "http://tempuri.org/tns").first,
-                    node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue != "true" {
-                self.manager = try String(deserialize: node)
-            } else {
-                self.manager = nil
-            }
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        if let manager = manager {
-            let managerNode = element.createChildElement(localName: "manager", uri: "http://tempuri.org/tns")
-            try manager.serialize(managerNode)
-        }
-    }
+class Employee: XMLCodable {
+	var manager: String?
+	init(manager: String? = nil) {
+		self.manager = manager
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.manager = try element.element(forLocalName: "manager", uri: "http://tempuri.org/tns", nillable: true, optional: true).map(String.init(deserialize:))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try manager?.serialize(to: element, localName: "manager", uri: "http://tempuri.org/tns")
+	}
 }

@@ -1,19 +1,13 @@
 typealias MyElement = MyType
-class MyType: XMLDeserializable {
-    var a: String
-    init(a: String) {
-        self.a = a
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            guard let node = element.elements(forLocalName: "a", uri: "http://tempuri.org/").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "a"))
-            }
-            self.a = try String(deserialize: node)
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        let aNode = element.createChildElement(localName: "a", uri: "http://tempuri.org/")
-        try a.serialize(aNode)
-    }
+class MyType: XMLCodable {
+	var a: String
+	init(a: String) {
+		self.a = a
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.a = try .init(deserialize: element.element(forLocalName: "a", uri: "http://tempuri.org/"))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try a.serialize(to: element, localName: "a", uri: "http://tempuri.org/")
+	}
 }

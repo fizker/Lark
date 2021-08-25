@@ -1,56 +1,29 @@
 typealias MyElement = MyType
-class MyType: XMLDeserializable {
-    var a: String
-    var b: String?
-    var c: String
-    var d: [String]
-    var e: [String]
-    init(a: String, b: String? = nil, c: String, d: [String], e: [String]) {
-        self.a = a
-        self.b = b
-        self.c = c
-        self.d = d
-        self.e = e
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            guard let node = element.elements(forLocalName: "a", uri: "http://tempuri.org/").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "a"))
-            }
-            self.a = try String(deserialize: node)
-        }
-        do {
-            if let node = element.elements(forLocalName: "b", uri: "http://tempuri.org/").first {
-                self.b = try String(deserialize: node)
-            } else {
-                self.b = nil
-            }
-        }
-        do {
-            guard let node = element.elements(forLocalName: "c", uri: "http://tempuri.org/").first else {
-                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "c"))
-            }
-            self.c = try String(deserialize: node)
-        }
-        self.d = try element.elements(forLocalName: "d", uri: "http://tempuri.org/").map(String.init(deserialize:))
-        self.e = try element.elements(forLocalName: "e", uri: "http://tempuri.org/").map(String.init(deserialize:))
-    }
-    func serialize(_ element: XMLElement) throws {
-        let aNode = element.createChildElement(localName: "a", uri: "http://tempuri.org/")
-        try a.serialize(aNode)
-        if let b = b {
-            let bNode = element.createChildElement(localName: "b", uri: "http://tempuri.org/")
-            try b.serialize(bNode)
-        }
-        let cNode = element.createChildElement(localName: "c", uri: "http://tempuri.org/")
-        try c.serialize(cNode)
-        for item in d {
-            let itemNode = element.createChildElement(localName: "d", uri: "http://tempuri.org/")
-            try item.serialize(itemNode)
-        }
-        for item in e {
-            let itemNode = element.createChildElement(localName: "e", uri: "http://tempuri.org/")
-            try item.serialize(itemNode)
-        }
-    }
+class MyType: XMLCodable {
+	var a: String
+	var b: String?
+	var c: String
+	var d: [String]
+	var e: [String]
+	init(a: String, b: String? = nil, c: String, d: [String], e: [String]) {
+		self.a = a
+		self.b = b
+		self.c = c
+		self.d = d
+		self.e = e
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.a = try .init(deserialize: element.element(forLocalName: "a", uri: "http://tempuri.org/"))
+		self.b = try element.element(forLocalName: "b", uri: "http://tempuri.org/", optional: true).map(String.init(deserialize:))
+		self.c = try .init(deserialize: element.element(forLocalName: "c", uri: "http://tempuri.org/"))
+		self.d = try element.elements(forLocalName: "d", uri: "http://tempuri.org/").map(String.init(deserialize:))
+		self.e = try element.elements(forLocalName: "e", uri: "http://tempuri.org/").map(String.init(deserialize:))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try a.serialize(to: element, localName: "a", uri: "http://tempuri.org/")
+		try b?.serialize(to: element, localName: "b", uri: "http://tempuri.org/")
+		try c.serialize(to: element, localName: "c", uri: "http://tempuri.org/")
+		try d.serializeAll(to: element, localName: "d", uri: "http://tempuri.org/")
+		try e.serializeAll(to: element, localName: "e", uri: "http://tempuri.org/")
+	}
 }
