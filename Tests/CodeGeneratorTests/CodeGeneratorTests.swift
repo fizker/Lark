@@ -204,6 +204,30 @@ class CodeGeneratorTests: XCTestCase {
                       expectedCodeFile: fixture("hello_world.txt"))
     }
 
+	func testHelloWordServiceWithPublicAccessLevel() throws {
+		XCTAssertCode(
+			definitionFile: fixture("hello_world.wsdl"),
+			expectedCodeFile: fixture("hello_world_public.txt"),
+			options: [.accessLevel(.public)]
+		)
+	}
+
+	func testHelloWordServiceWithInternalAccessLevel() throws {
+		XCTAssertCode(
+			definitionFile: fixture("hello_world.wsdl"),
+			expectedCodeFile: fixture("hello_world.txt"),
+			options: [.accessLevel(.internal)]
+		)
+	}
+
+	func testHelloWordServiceWithOpenAccessLevel() throws {
+		XCTAssertCode(
+			definitionFile: fixture("hello_world.wsdl"),
+			expectedCodeFile: fixture("hello_world_open.txt"),
+			options: [.accessLevel(.open)]
+		)
+	}
+
     // TODO: implement this
     func _testElementRef() throws {
         let schema = try deserialize("element_ref.xsd")

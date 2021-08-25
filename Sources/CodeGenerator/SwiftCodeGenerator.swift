@@ -327,7 +327,7 @@ extension SwiftEnum {
 
 extension SwiftTypealias {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
-        return ["typealias \(name) = \(type.toSwiftCode())"].map(indentation.apply(toLineOfCode:))
+        return ["\(options.generatedCodeForAccessLevel)typealias \(name) = \(type.toSwiftCode())"].map(indentation.apply(toLineOfCode:))
     }
 }
 

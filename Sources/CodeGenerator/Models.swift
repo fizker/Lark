@@ -95,6 +95,7 @@ public struct SwiftEnum: SwiftMetaType {
 public struct SwiftTypealias: SwiftMetaType {
     public let name: Identifier
     let type: SwiftType
+    let options: [GeneratorOption]
 }
 
 public struct SwiftParameter {

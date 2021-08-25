@@ -86,7 +86,7 @@ extension SimpleType {
             if restriction.enumeration.count == 0 {
                 // TODO: what to do with the pattern?
                 let baseType = mapping[.type(restriction.base)]!
-                return SwiftTypealias(name: name, type: .identifier(baseType))
+                return SwiftTypealias(name: name, type: .identifier(baseType), options: options)
             } else {
                 let cases = restriction.enumeration.dictionary({ ($0.toSwiftPropertyName(), $0) })
                 return SwiftEnum(name: name, rawType: .identifier("String"), cases: cases, options: options)
@@ -101,7 +101,7 @@ extension Element {
         switch self.content {
         case let .base(base):
             let baseType = types[.type(base)]!
-            return SwiftTypealias(name: name, type: .init(type: baseType.name, element: self))
+            return SwiftTypealias(name: name, type: .init(type: baseType.name, element: self), options: options)
         case let .complex(complex):
             return complex.toSwift(name: name, mapping: mapping, types: types, options: options)
         }
