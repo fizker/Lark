@@ -8,6 +8,48 @@ public protocol XMLSerializable {
     func serialize(_ element: XMLElement) throws
 }
 
+public typealias XMLEncodable = XMLSerializable
+public typealias XMLDecodable = XMLDeserializable
+public typealias XMLCodable = XMLEncodable & XMLDecodable
+
+public extension Optional where Wrapped: XMLSerializable {
+	/// Serializes the object as a child element on the given `XMLElement`. If the object is nil, an attribute of name `nil` with value `"true"` will be added instead.
+	func serialize(to element: XMLElement, localName: String, uri: String) throws {
+		let node = element.createChildElement(localName: localName, uri: uri)
+		if let item = self {
+			try item.serialize(element)
+		} else {
+			node.addAttribute(XMLNode.attribute(prefix: "xsi", localName: "nil", uri: NS_XSI, stringValue: "true"))
+		}
+	}
+}
+
+public extension XMLSerializable {
+	/// Serializes the object as a child element on the given `XMLElement`.
+	func serialize(to element: XMLElement, localName: String, uri: String) throws {
+		let node = element.createChildElement(localName: localName, uri: uri)
+		try serialize(node)
+	}
+}
+
+public extension Sequence {
+	func serializeAll(to element: XMLElement, localName: String, uri: String) throws
+	where Element: XMLSerializable
+	{
+		for item in self {
+			try item.serialize(to: element, localName: localName, uri: uri)
+		}
+	}
+
+	func serializeAll<T: XMLSerializable>(to element: XMLElement, localName: String, uri: String) throws
+	where Element == Optional<T>
+	{
+		for item in self {
+			try item.serialize(to: element, localName: localName, uri: uri)
+		}
+	}
+}
+
 public enum XMLDeserializationError: Error {
     case noElementWithName(QualifiedName)
     case cannotDeserialize
@@ -23,6 +65,43 @@ public protocol StringDeserializable {
 
 public protocol StringSerializable {
     func serialize() throws -> String
+}
+
+public extension XMLElement {
+	func elements<T: XMLDeserializable>(forLocalName localName: String, uri: String, nillable: Bool, map: (XMLElement) throws -> T) rethrows -> [T?] {
+		return try elements(forLocalName: localName, uri: uri).map { node in
+			if nillable && node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue == "true" {
+				return nil
+			}
+
+			return try map(node)
+		}
+	}
+
+	func element(forLocalName localName: String, uri: String, nillable: Bool, optional: Bool = false) throws -> XMLElement? {
+		guard let node = elements(forLocalName: localName, uri: uri).first
+		else {
+			if optional {
+				return nil
+			} else {
+				throw XMLDeserializationError.noElementWithName(QualifiedName(uri: uri, localName: localName))
+			}
+		}
+		if nillable && node.attribute(forLocalName: "nil", uri: NS_XSI)?.stringValue == "true" {
+			return nil
+		}
+		return node
+	}
+
+	func element(forLocalName localName: String, uri: String, optional: Bool) throws -> XMLElement? {
+		return try element(forLocalName: localName, uri: uri, nillable: false, optional: optional)
+	}
+
+	func element(forLocalName localName: String, uri: String) throws -> XMLElement {
+		guard let node = elements(forLocalName: localName, uri: uri).first
+		else { throw XMLDeserializationError.noElementWithName(QualifiedName(uri: uri, localName: localName)) }
+		return node
+	}
 }
 
 // MARK: - Base type serialization

@@ -7,48 +7,30 @@ import Lark
 //
 // MARK: - SOAP Structures
 //
-class GetSMSCodes: XMLDeserializable {
-    var identifier: String?
-    init(identifier: String? = nil) {
-        self.identifier = identifier
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            if let node = element.elements(forLocalName: "identifier", uri: "http://tempuri.org/").first {
-                self.identifier = try String(deserialize: node)
-            } else {
-                self.identifier = nil
-            }
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        if let identifier = identifier {
-            let identifierNode = element.createChildElement(localName: "identifier", uri: "http://tempuri.org/")
-            try identifier.serialize(identifierNode)
-        }
-    }
+class GetSMSCodes: XMLCodable {
+	var identifier: String?
+	init(identifier: String? = nil) {
+		self.identifier = identifier
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.identifier = try element.element(forLocalName: "identifier", uri: "http://tempuri.org/", optional: true).map(String.init(deserialize:))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try identifier?.serialize(to: element, localName: "identifier", uri: "http://tempuri.org/")
+	}
 }
 
-class GetSMSCodesResponse: XMLDeserializable {
-    var getSMSCodesResult: String?
-    init(getSMSCodesResult: String? = nil) {
-        self.getSMSCodesResult = getSMSCodesResult
-    }
-    required init(deserialize element: XMLElement) throws {
-        do {
-            if let node = element.elements(forLocalName: "GetSMSCodesResult", uri: "http://tempuri.org/").first {
-                self.getSMSCodesResult = try String(deserialize: node)
-            } else {
-                self.getSMSCodesResult = nil
-            }
-        }
-    }
-    func serialize(_ element: XMLElement) throws {
-        if let getSMSCodesResult = getSMSCodesResult {
-            let getSMSCodesResultNode = element.createChildElement(localName: "GetSMSCodesResult", uri: "http://tempuri.org/")
-            try getSMSCodesResult.serialize(getSMSCodesResultNode)
-        }
-    }
+class GetSMSCodesResponse: XMLCodable {
+	var getSMSCodesResult: String?
+	init(getSMSCodesResult: String? = nil) {
+		self.getSMSCodesResult = getSMSCodesResult
+	}
+	required init(deserialize element: XMLElement) throws {
+		self.getSMSCodesResult = try element.element(forLocalName: "GetSMSCodesResult", uri: "http://tempuri.org/", optional: true).map(String.init(deserialize:))
+	}
+	func serialize(_ element: XMLElement) throws {
+		try getSMSCodesResult?.serialize(to: element, localName: "GetSMSCodesResult", uri: "http://tempuri.org/")
+	}
 }
 
 typealias StringType = String?
@@ -57,51 +39,33 @@ typealias StringType = String?
 // MARK: - SOAP Client
 //
 class ExampleClient: Lark.Client {
-    static let defaultEndpoint = URL(string: "http://tempuri.org/Example.asmx")!
-    override init(endpoint: URL = ExampleClient.defaultEndpoint, sessionManager: SessionManager = SessionManager()) {
-        super.init(endpoint: endpoint, sessionManager: sessionManager)
-    }
-    /// Call getSMSCodes synchronously
-    func getSMSCodes(identifier: String? = nil) throws -> String? {
-        let response = try call(
-            action: URL(string: "http://tempuri.org/GetSMSCodes")!,
-            serialize: { envelope in
-                let parameter = GetSMSCodes(identifier: identifier)
-                let node = XMLElement(prefix: "ns0", localName: "GetSMSCodes", uri: "http://tempuri.org/")
-                node.addNamespace(XMLNode.namespace(withName: "ns0", stringValue: "http://tempuri.org/") as! XMLNode)
-                try parameter.serialize(node)
-                envelope.body.addChild(node)
-                return envelope
-            },
-            deserialize: { envelope -> String? in
-                guard let node = envelope.body.elements(forLocalName: "GetSMSCodesResponse", uri: "http://tempuri.org/").first else {
-                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "GetSMSCodesResponse"))
-                }
-                let result = try GetSMSCodesResponse(deserialize: node)
-                return result.getSMSCodesResult
-            })
-        return try response.result.resolve()
-    }
-    /// Call getSMSCodes asynchronously
-    @discardableResult func getSMSCodes(identifier: String? = nil, completionHandler: @escaping (Result<String?>) -> Void) -> DataRequest {
-        return call(
-            action: URL(string: "http://tempuri.org/GetSMSCodes")!,
-            serialize: { envelope in
-                let parameter = GetSMSCodes(identifier: identifier)
-                let node = XMLElement(prefix: "ns0", localName: "GetSMSCodes", uri: "http://tempuri.org/")
-                node.addNamespace(XMLNode.namespace(withName: "ns0", stringValue: "http://tempuri.org/") as! XMLNode)
-                try parameter.serialize(node)
-                envelope.body.addChild(node)
-                return envelope
-            },
-            deserialize: { envelope -> String? in
-                guard let node = envelope.body.elements(forLocalName: "GetSMSCodesResponse", uri: "http://tempuri.org/").first else {
-                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "GetSMSCodesResponse"))
-                }
-                let result = try GetSMSCodesResponse(deserialize: node)
-                return result.getSMSCodesResult
-            },
-            completionHandler: completionHandler)
-    }
+	static let defaultEndpoint = URL(string: "http://tempuri.org/Example.asmx")!
+	override init(endpoint: URL = ExampleClient.defaultEndpoint, session: Session = .init()) {
+		super.init(endpoint: endpoint, session: session)
+	}
+	/// Call getSMSCodes synchronously
+	func getSMSCodes(identifier: String? = nil) throws -> String? {
+		let response = try call(
+			action: URL(string: "http://tempuri.org/GetSMSCodes")!,
+			serialize: (prefix: "ns0", localName: "GetSMSCodes", uri: "http://tempuri.org/", {
+				GetSMSCodes(identifier: identifier)
+			}),
+			deserialize: (localName: "GetSMSCodesResponse", uri: "http://tempuri.org/",
+				\GetSMSCodesResponse.getSMSCodesResult
+			))
+		return try response.result.get()
+	}
+	/// Call getSMSCodes asynchronously
+	@discardableResult func getSMSCodes(identifier: String? = nil, completionHandler: @escaping (Result<String?, Error>) -> Void) -> DataRequest {
+		return call(
+			action: URL(string: "http://tempuri.org/GetSMSCodes")!,
+			serialize: (prefix: "ns0", localName: "GetSMSCodes", uri: "http://tempuri.org/", {
+				GetSMSCodes(identifier: identifier)
+			}),
+			deserialize: (localName: "GetSMSCodesResponse", uri: "http://tempuri.org/",
+				\GetSMSCodesResponse.getSMSCodesResult
+			),
+			completionHandler: completionHandler)
+	}
 }
 

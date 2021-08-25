@@ -7,64 +7,46 @@ import Lark
 //
 // MARK: - SOAP Structures
 //
-class MessageType: XMLDeserializable {
-    init() {
-    }
-    required init(deserialize element: XMLElement) throws {
-    }
-    func serialize(_ element: XMLElement) throws {
-    }
+class MessageType: XMLCodable {
+	init() {
+	}
+	required init(deserialize element: XMLElement) throws {
+	}
+	func serialize(_ element: XMLElement) throws {
+	}
 }
 
 //
 // MARK: - SOAP Client
 //
 class TestClient: Lark.Client {
-    static let defaultEndpoint = URL(string: "http://localhost")!
-    override init(endpoint: URL = TestClient.defaultEndpoint, sessionManager: SessionManager = SessionManager()) {
-        super.init(endpoint: endpoint, sessionManager: sessionManager)
-    }
-    /// Call test synchronously
-    func test() throws -> MessageType {
-        let response = try call(
-            action: URL(string: "")!,
-            serialize: { envelope in
-                let parameter = MessageType()
-                let node = XMLElement(prefix: "ns0", localName: "MessageType", uri: "http://tempuri.org/")
-                node.addNamespace(XMLNode.namespace(withName: "ns0", stringValue: "http://tempuri.org/") as! XMLNode)
-                try parameter.serialize(node)
-                envelope.body.addChild(node)
-                return envelope
-            },
-            deserialize: { envelope -> MessageType in
-                guard let node = envelope.body.elements(forLocalName: "MessageType", uri: "http://tempuri.org/").first else {
-                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "MessageType"))
-                }
-                let result = try MessageType(deserialize: node)
-                return result
-            })
-        return try response.result.resolve()
-    }
-    /// Call test asynchronously
-    @discardableResult func test(completionHandler: @escaping (Result<MessageType>) -> Void) -> DataRequest {
-        return call(
-            action: URL(string: "")!,
-            serialize: { envelope in
-                let parameter = MessageType()
-                let node = XMLElement(prefix: "ns0", localName: "MessageType", uri: "http://tempuri.org/")
-                node.addNamespace(XMLNode.namespace(withName: "ns0", stringValue: "http://tempuri.org/") as! XMLNode)
-                try parameter.serialize(node)
-                envelope.body.addChild(node)
-                return envelope
-            },
-            deserialize: { envelope -> MessageType in
-                guard let node = envelope.body.elements(forLocalName: "MessageType", uri: "http://tempuri.org/").first else {
-                    throw XMLDeserializationError.noElementWithName(QualifiedName(uri: "http://tempuri.org/", localName: "MessageType"))
-                }
-                let result = try MessageType(deserialize: node)
-                return result
-            },
-            completionHandler: completionHandler)
-    }
+	static let defaultEndpoint = URL(string: "http://localhost")!
+	override init(endpoint: URL = TestClient.defaultEndpoint, session: Session = .init()) {
+		super.init(endpoint: endpoint, session: session)
+	}
+	/// Call test synchronously
+	func test() throws -> MessageType {
+		let response = try call(
+			action: URL(string: "")!,
+			serialize: (prefix: "ns0", localName: "MessageType", uri: "http://tempuri.org/", {
+				MessageType()
+			}),
+			deserialize: (localName: "MessageType", uri: "http://tempuri.org/",
+				\MessageType.self
+			))
+		return try response.result.get()
+	}
+	/// Call test asynchronously
+	@discardableResult func test(completionHandler: @escaping (Result<MessageType, Error>) -> Void) -> DataRequest {
+		return call(
+			action: URL(string: "")!,
+			serialize: (prefix: "ns0", localName: "MessageType", uri: "http://tempuri.org/", {
+				MessageType()
+			}),
+			deserialize: (localName: "MessageType", uri: "http://tempuri.org/",
+				\MessageType.self
+			),
+			completionHandler: completionHandler)
+	}
 }
 

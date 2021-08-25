@@ -60,11 +60,15 @@ public struct Indentation {
         precondition(level >= 0)
         self.chars = chars
         self.level = level
-        self.value = String(repeating: chars, count: level)
+        self.value = String(repeating: "\t", count: level)
     }
 
+	private func normalize(_ line: LineOfCode) -> LineOfCode {
+		return line.replacingOccurrences(of: chars, with: "\t", options: [ .anchored ])
+	}
+
     func apply(toLineOfCode lineOfCode: LineOfCode) -> LineOfCode {
-        return value + lineOfCode
+        return value + normalize(lineOfCode)
     }
 
     func apply(toFirstLine firstLine: LineOfCode,
@@ -100,7 +104,7 @@ extension SwiftBuiltin {
 
 extension SwiftTypeClass {
     public func toLinesOfCode(at indentation: Indentation) -> [LineOfCode] {
-        let baseType = base?.name ?? "XMLDeserializable"
+        let baseType = base?.name ?? "XMLCodable"
         return indentation.apply(
             toFirstLine: "class \(name): \(baseType) {",
             nestedLines:      linesOfCodeForBody(at:),
@@ -156,67 +160,21 @@ extension SwiftTypeClass {
         return indentation.apply(
             toFirstLine: "required init(deserialize element: XMLElement) throws {",
             nestedLines:
-                properties.flatMap { property -> [LineOfCode] in
+                properties.map { property -> LineOfCode in
                     let element = property.element.name
-                    let throwNoElement = "throw XMLDeserializationError.noElementWithName(QualifiedName(uri: \"\(element.uri)\", localName: \"\(element.localName)\"))"
                     switch property.type {
-                    case let .identifier(identifier):
-                        return [
-                            "do {",
-                            "    guard let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first else {",
-                            "        \(throwNoElement)",
-                            "    }",
-                            "    self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "}"
-                        ]
+                    case .identifier(_):
+                        return "self.\(property.name) = try .init(deserialize: element.element(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\"))"
                     case let .optional(.identifier(identifier)):
-                        return [
-                            "do {",
-                            "    if let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first {",
-                            "        self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "    } else {",
-                            "        self.\(property.name) = nil",
-                            "    }",
-                            "}"
-                        ]
+                        return "self.\(property.name) = try element.element(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\", optional: true).map(\(identifier).init(deserialize:))"
                     case let .nillable(.identifier(identifier)):
-                        return [
-                            "do {",
-                            "    guard let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first else {",
-                            "        \(throwNoElement)",
-                            "    }",
-                            "    if node.attribute(forLocalName: \"nil\", uri: NS_XSI)?.stringValue != \"true\" {",
-                            "        self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "    } else {",
-                            "        self.\(property.name) = nil",
-                            "    }",
-                            "}"
-                        ]
+                        return "self.\(property.name) = try element.element(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\", nillable: true).map(\(identifier).init(deserialize:))"
                     case let .optional(.nillable(.identifier(identifier))):
-                        return [
-                            "do {",
-                            "    if let node = element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").first,",
-                            "            node.attribute(forLocalName: \"nil\", uri: NS_XSI)?.stringValue != \"true\" {",
-                            "        self.\(property.name) = try \(identifier)(deserialize: node)",
-                            "    } else {",
-                            "        self.\(property.name) = nil",
-                            "    }",
-                            "}"
-                        ]
+                        return "self.\(property.name) = try element.element(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\", nillable: true, optional: true).map(\(identifier).init(deserialize:))"
                     case let .array(.identifier(identifier)):
-                        return [
-                            "self.\(property.name) = try element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").map(\(identifier).init(deserialize:))"
-                        ]
+                        return "self.\(property.name) = try element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").map(\(identifier).init(deserialize:))"
                     case let .array(.nillable(.identifier(identifier))):
-                        return [
-                            "self.\(property.name) = try element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\").map { node in",
-                            "    if node.attribute(forLocalName: \"nil\", uri: NS_XSI)?.stringValue != \"true\" {",
-                            "        return try \(identifier)(deserialize: node)",
-                            "    } else {",
-                            "        return nil",
-                            "    }",
-                            "}"
-                        ]
+                        return "self.\(property.name) = try element.elements(forLocalName: \"\(element.localName)\", uri: \"\(element.uri)\", nillable: true, map: \(identifier).init(deserialize:))"
                     default:
                         // Should not happen as the cases should match whats generated by `SwiftType(init:)`
                         fatalError("Type \(property.type) not supported")
@@ -231,49 +189,19 @@ extension SwiftTypeClass {
         return indentation.apply(
             toFirstLine: "\(override)func serialize(_ element: XMLElement) throws {",
             nestedLines:
-            properties.flatMap { property -> [LineOfCode] in
+            properties.map { property -> LineOfCode in
                 let element = property.element.name
-                let setNil = "addAttribute(XMLNode.attribute(prefix: \"xsi\", localName: \"nil\", uri: NS_XSI, stringValue: \"true\"))"
                 switch property.type {
                 case .identifier:
-                    return [
-                        "let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "try \(property.name).serialize(\(property.name)Node)"
-                    ]
+                    return "try \(property.name).serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .optional(.identifier), .optional(.nillable(.identifier)):
-                    return [
-                        "if let \(property.name) = \(property.name) {",
-                        "    let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    try \(property.name).serialize(\(property.name)Node)",
-                        "}"
-                    ]
+                    return "try \(property.name)?.serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .nillable(.identifier):
-                    return [
-                        "let \(property.name)Node = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "if let \(property.name) = \(property.name) {",
-                        "    try \(property.name).serialize(\(property.name)Node)",
-                        "} else {",
-                        "    \(property.name)Node.\(setNil)",
-                        "}"
-                    ]
+                    return "try \(property.name).serialize(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .array(.identifier):
-                    return [
-                        "for item in \(property.name) {",
-                        "    let itemNode = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    try item.serialize(itemNode)",
-                        "}"
-                    ]
+                    return "try \(property.name).serializeAll(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 case .array(.nillable(.identifier)):
-                    return [
-                        "for item in \(property.name) {",
-                        "    let itemNode = element.createChildElement(localName: \"\(element.localName)\", uri: \"\(element.uri)\")",
-                        "    if let item = item {",
-                        "        try item.serialize(itemNode)",
-                        "    } else {",
-                        "        itemNode.\(setNil)",
-                        "    }",
-                        "}"
-                    ]
+                    return "try \(property.name).serializeAll(to: element, localName: \"\(element.localName)\", uri: \"\(element.uri)\")"
                 default:
                     fatalError("Type \(property.type) not supported")
                 }
@@ -518,36 +446,27 @@ extension ServiceMethod: LinesOfCodeConvertible {
             .joined(separator: ", ")
 
         return [
-            "        serialize: { envelope in",
-            "            let parameter = \(input.type.name)(\(arguments))",
-            "            let node = XMLElement(prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\")",
-            "            node.addNamespace(XMLNode.namespace(withName: \"ns0\", stringValue: \"\(input.element.uri)\") as! XMLNode)",
-            "            try parameter.serialize(node)",
-            "            envelope.body.addChild(node)",
-            "            return envelope",
-            "        },"
+            "        serialize: (prefix: \"ns0\", localName: \"\(input.element.localName)\", uri: \"\(input.element.uri)\", {",
+            "            \(input.type.name)(\(arguments))",
+            "        }),"
         ]
     }
 
     func callDeserializeArgument(isLastArgument: Bool) -> [LineOfCode] {
         var lines = [
-            "        deserialize: { envelope -> \(responseType()) in",
-            "            guard let node = envelope.body.elements(forLocalName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\").first else {",
-            "                throw XMLDeserializationError.noElementWithName(QualifiedName(uri: \"\(output.element.uri)\", localName: \"\(output.element.localName)\"))",
-            "            }",
-            "            let result = try \(output.type.name)(deserialize: node)"
+            "        deserialize: (localName: \"\(output.element.localName)\", uri: \"\(output.element.uri)\",",
         ]
         if output.type.allProperties.count == 1 {
             lines += [
-                "            return result.\(output.type.allProperties.first!.name)"
+                "            \\\(output.type.name).\(output.type.allProperties.first!.name)"
             ]
         } else {
             lines += [
-                "            return result"
+                "            \\\(output.type.name).self"
             ]
         }
         lines += [
-            "        }\(isLastArgument ? ")" : ",")"
+            "        )\(isLastArgument ? ")" : ",")"
         ]
         return lines
     }

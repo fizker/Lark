@@ -1,8 +1,8 @@
-class MyType: XMLDeserializable {
-    init() {
-    }
-    required init(deserialize element: XMLElement) throws {
-    }
-    func serialize(_ element: XMLElement) throws {
-    }
+class MyType: XMLCodable {
+	init() {
+	}
+	required init(deserialize element: XMLElement) throws {
+	}
+	func serialize(_ element: XMLElement) throws {
+	}
 }
